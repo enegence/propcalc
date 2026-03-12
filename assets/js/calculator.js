@@ -451,14 +451,21 @@ function updateBreakEvenRent() {
     // Calculate comparison using AVERAGE break-even (most meaningful)
     const comparisonText = document.getElementById('rentComparisonText');
     const difference = monthlyRent - breakEvenAverage;
+    const year1Diff = monthlyRent - breakEvenYear1;
+    const finalDiff = monthlyRent - breakEvenFinal;
 
     if (difference > 0) {
+        const profitable_throughout = finalDiff >= 0;
+        const subtextMsg = profitable_throughout
+            ? `You'll be profitable throughout the ${investmentHorizon}-year period`
+            : `Profitable on average, but rising costs will exceed rent in later years`;
+        const subtextColor = profitable_throughout ? '#666' : '#856404';
         comparisonText.innerHTML = `
             <div style="color: #28a745;">
                 ✓ <strong>Profitable!</strong> Current rent ($${monthlyRent.toLocaleString()}) is <strong>$${difference.toLocaleString()} above</strong> average break-even
             </div>
-            <div style="font-size: 0.9em; margin-top: 8px; color: #666;">
-                You'll be profitable throughout the ${investmentHorizon}-year period
+            <div style="font-size: 0.9em; margin-top: 8px; color: ${subtextColor};">
+                ${subtextMsg}
             </div>
         `;
     } else if (difference === 0) {
@@ -481,18 +488,15 @@ function updateBreakEvenRent() {
         `;
     }
 
-    // Add secondary comparison for Year 1 and Final Year
+    // Add Year 1 / Final Year detail line
     let additionalInfo = '<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd; font-size: 0.9em;">';
 
-    const year1Diff = monthlyRent - breakEvenYear1;
-    const finalDiff = monthlyRent - breakEvenFinal;
-
     if (year1Diff >= 0 && finalDiff < 0) {
-        additionalInfo += `<div style="color: #856404;">Warning: Profitable now, but by Year ${investmentHorizon} you'll be losing $${Math.abs(finalDiff).toLocaleString()}/month</div>`;
+        additionalInfo += `<div style="color: #856404;">Year 1: $${year1Diff.toLocaleString()}/mo above break-even &rarr; Year ${investmentHorizon}: $${Math.abs(finalDiff).toLocaleString()}/mo below break-even</div>`;
     } else if (year1Diff < 0 && finalDiff < 0) {
         additionalInfo += `<div style="color: #dc3545;">Losing money from Year 1 and getting worse each year</div>`;
     } else if (year1Diff > 0 && finalDiff > 0) {
-        additionalInfo += `<div style="color: #28a745;">✓ Profitable in Year 1 ($${year1Diff.toLocaleString()}/mo) and Year ${investmentHorizon} ($${finalDiff.toLocaleString()}/mo)</div>`;
+        additionalInfo += `<div style="color: #28a745;">✓ Year 1: $${year1Diff.toLocaleString()}/mo above break-even &rarr; Year ${investmentHorizon}: $${finalDiff.toLocaleString()}/mo above break-even</div>`;
     }
 
     additionalInfo += '</div>';
