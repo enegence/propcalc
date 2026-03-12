@@ -9,3 +9,10 @@ Thumbs.db
 # Legacy files (superseded by index.html + assets/)
 propcalc.html
 propcalc.md
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
