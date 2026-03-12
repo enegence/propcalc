@@ -350,8 +350,25 @@ tr:hover {
 }
 
 @media (max-width: 768px) {
+    body {
+        padding: 8px;
+    }
+
+    .content {
+        padding: 12px;
+    }
+
+    .section {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
     .grid-2, .grid-3 {
         grid-template-columns: 1fr;
+    }
+
+    .header {
+        padding: 25px 15px;
     }
 
     .header h1 {
