@@ -1,0 +1,11 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
+# Legacy files (superseded by index.html + assets/)
+propcalc.html
+propcalc.md

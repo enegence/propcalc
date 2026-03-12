@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PropCalc — Comprehensive rental property investment analysis. Calculate ROI, cash flow, break-even rent, expense inflation, and compare against alternative investments.">
+    <title>PropCalc — Property Investment Calculator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PropCalc</h1>
+            <p>Property Investment Calculator &mdash; Analyze rental ROI, cash flow &amp; break-even</p>
+        </div>
+
+        <div class="content">
+            <!-- Property Information Section -->
+            <div class="section no-print">
+                <h2>Property Information</h2>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="address">Property Address</label>
+                        <input type="text" id="address" value="" placeholder="Enter full property address (optional)">
+                    </div>
+                    <div class="input-group">
+                        <label for="zipCode">ZIP Code</label>
+                        <input type="text" id="zipCode" value="" placeholder="Enter ZIP code">
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Used for local tax rate lookup
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="apiKey">RentCast API Key (Optional)</label>
+                        <input type="text" id="apiKey" placeholder="Enter your API key for auto-lookup" style="font-family: monospace;">
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Get a <a href="https://app.rentcast.io/app/api" target="_blank" style="color: #2980b9;">free API key</a> (50 calls/month) to auto-fetch property data
+                        </p>
+                    </div>
+                    <div class="input-group">
+                        <label for="apiNinjasKey">API Ninjas Key (Optional)</label>
+                        <input type="text" id="apiNinjasKey" placeholder="Enter your API key for tax rate lookup" style="font-family: monospace;">
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Get a <a href="https://api-ninjas.com/api/propertytax" target="_blank" style="color: #2980b9;">free API key</a> (50,000 calls/month) to auto-fetch local tax rates
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <button class="button" onclick="fetchPropertyData()" style="margin-top: 10px;" id="fetchButton">
+                        Fetch Property Data
+                    </button>
+                    <button class="button" onclick="fetchTaxRate()" style="margin-top: 10px; background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);" id="fetchTaxButton">
+                        Lookup Local Tax Rate
+                    </button>
+                </div>
+
+                <div id="apiMessage" style="display: none; padding: 15px; border-radius: 8px; margin-top: 15px;"></div>
+
+                <div class="grid-2" style="margin-top: 20px;">
+                    <div class="input-group">
+                        <label for="currentValue">Appraised/Market Value ($) <span class="tooltip" data-tooltip="Current estimated market value of the property">ⓘ</span></label>
+                        <input type="number" id="currentValue" value="60000" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="sqft">Square Footage</label>
+                        <input type="number" id="sqft" value="" min="0" placeholder="e.g., 1,200">
+                    </div>
+                </div>
+
+                <div class="grid-3">
+                    <div class="input-group">
+                        <label for="bedrooms">Bedrooms</label>
+                        <input type="number" id="bedrooms" value="" min="0" placeholder="e.g., 3">
+                    </div>
+                    <div class="input-group">
+                        <label for="bathrooms">Bathrooms</label>
+                        <input type="number" id="bathrooms" value="" min="0" step="0.5" placeholder="e.g., 2">
+                    </div>
+                    <div class="input-group">
+                        <label for="yearBuilt">Year Built</label>
+                        <input type="number" id="yearBuilt" value="" min="1800" max="2026" placeholder="e.g., 1990">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase & Financial Details -->
+            <div class="section no-print">
+                <h2>Purchase &amp; Financial Details</h2>
+                <div class="input-group">
+                    <label for="purchasePrice">Purchase Price ($)</label>
+                    <div class="slider-container">
+                        <input type="range" id="purchasePrice" class="slider" min="10000" max="1000000" value="60000" step="5000">
+                        <div class="slider-value">
+                            <span>$10,000</span>
+                            <span class="current-value">$<span id="purchasePriceValue">60,000</span></span>
+                            <span>$1,000,000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="monthlyRent">Monthly Rent ($) <span class="tooltip" data-tooltip="Amount tenant pays per month">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="monthlyRent" class="slider" min="0" max="1500" value="400" step="25">
+                        <div class="slider-value">
+                            <span>$0</span>
+                            <span class="current-value">$<span id="monthlyRentValue">400</span></span>
+                            <span>$1,500</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card" style="background: linear-gradient(135deg, #fff8dc 0%, #ffe4b5 100%); border-top: 3px solid #ffa500; margin-top: 20px;">
+                    <h3 style="color: #8b4513;">Break-Even Rent Analysis</h3>
+                    <p style="font-size: 0.95em; color: #666; margin-bottom: 15px;">
+                        Minimum monthly rent needed to cover expenses (varies by year due to inflation)
+                    </p>
+
+                    <div class="grid-3">
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">YEAR 1</div>
+                            <div style="font-size: 2em; font-weight: 700; color: #2980b9;">$<span id="breakEvenRentYear1">0</span></div>
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">Starting expenses</div>
+                        </div>
+
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); border: 2px solid #ffa500;">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">AVERAGE</div>
+                            <div style="font-size: 2.2em; font-weight: 700; color: #ffa500;">$<span id="breakEvenRentAverage">0</span></div>
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;"><strong>Target rent</strong></div>
+                        </div>
+
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">YEAR <span id="breakEvenFinalYear">20</span></div>
+                            <div style="font-size: 2em; font-weight: 700; color: #dc3545;">$<span id="breakEvenRentFinal">0</span></div>
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">Projected end</div>
+                        </div>
+                    </div>
+
+                    <div id="rentComparisonText" style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; font-size: 1.05em; font-weight: 600; text-align: center;">
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.7); border-radius: 6px; font-size: 0.9em; color: #666;">
+                        <strong>How to use this:</strong><br>
+                        &bull; <strong>Year 1:</strong> Can you rent it out today at a profit?<br>
+                        &bull; <strong>Average:</strong> Charge this or more to stay profitable throughout ownership<br>
+                        &bull; <strong>Year <span id="breakEvenFinalYearLabel">20</span>:</strong> Will your current rent still cover costs at the end?
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Note:</strong> You can choose to finance the property using the financing options below, or pay cash.
+                </div>
+            </div>
+
+            <!-- Financing Options -->
+            <div class="section no-print">
+                <h2>Financing Options</h2>
+
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="isFinanced" style="width: auto; margin-right: 10px;">
+                        Finance this property with a mortgage
+                    </label>
+                    <p style="margin-top: 10px; font-size: 0.95em; color: #666;">
+                        Check this box if you plan to finance the purchase. Monthly mortgage payments will be added to your expenses.
+                    </p>
+                </div>
+
+                <div id="financingDetails" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2980b9;">
+                    <h3 style="color: #2c3e50; margin-bottom: 15px;">Loan Terms</h3>
+
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label for="downPaymentPercent">Down Payment (%) <span class="tooltip" data-tooltip="Typically 15-25% for investment properties">ⓘ</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="downPaymentPercent" class="slider" min="0" max="50" value="20" step="1">
+                                <div class="slider-value">
+                                    <span>0%</span>
+                                    <span class="current-value"><span id="downPaymentPercentValue">20</span>%</span>
+                                    <span>50%</span>
+                                </div>
+                            </div>
+                            <p style="margin-top: 8px; font-size: 0.9em; color: #666;">
+                                Down payment amount: $<span id="downPaymentAmount">12,000</span>
+                            </p>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="interestRate">Interest Rate (%) <span class="tooltip" data-tooltip="Current investment property rates: 6-8%">ⓘ</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="interestRate" class="slider" min="3.0" max="12.0" value="7.0" step="0.1">
+                                <div class="slider-value">
+                                    <span>3.0%</span>
+                                    <span class="current-value"><span id="interestRateValue">7.0</span>%</span>
+                                    <span>12.0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="loanTerm">Loan Term (Years) <span class="tooltip" data-tooltip="Typical: 15 or 30 years">ⓘ</span></label>
+                        <div class="slider-container">
+                            <input type="range" id="loanTerm" class="slider" min="10" max="30" value="30" step="5">
+                            <div class="slider-value">
+                                <span>10 years</span>
+                                <span class="current-value"><span id="loanTermValue">30</span> years</span>
+                                <span>30 years</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card" style="margin-top: 20px; background: #e7f3ff; border-top-color: #2980b9;">
+                        <h3>Monthly Mortgage Payment</h3>
+                        <div class="value" style="color: #2c3e50; font-size: 2.5em;">$<span id="monthlyMortgage">0</span></div>
+                        <div class="subtext">Principal &amp; Interest only (add insurance/PMI separately if required)</div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd;">
+                            <strong>Loan Details:</strong><br>
+                            Loan Amount: $<span id="loanAmount">0</span><br>
+                            Total Interest Paid: $<span id="totalInterest">0</span> over <span id="loanTermDisplay">30</span> years<br>
+                            Total Amount Paid: $<span id="totalPaid">0</span>
+                        </div>
+                    </div>
+
+                    <div class="note" style="margin-top: 15px;">
+                        <strong>Important Notes on Financing:</strong><br>
+                        &bull; Investment property loans typically require 15-25% down (higher than primary residence)<br>
+                        &bull; Interest rates are usually 0.5-1% higher than primary residence rates<br>
+                        &bull; Lenders will require landlord/hazard insurance<br>
+                        &bull; May require PMI (Private Mortgage Insurance) if down payment &lt; 20%<br>
+                        &bull; Closing costs typically 2-5% of purchase price (not included in this calculator)<br>
+                        &bull; Your mortgage interest is tax-deductible as a business expense
+                    </div>
+                </div>
+            </div>
+
+            <!-- Owner Occupancy Status -->
+            <div class="section no-print">
+                <h2>Ownership Type</h2>
+
+                <div class="input-group">
+                    <label for="ownerOccupied">
+                        <input type="checkbox" id="ownerOccupied" style="width: auto; margin-right: 10px;">
+                        Owner-Occupied Property
+                    </label>
+                    <p style="margin-top: 10px; font-size: 0.95em; color: #666;">
+                        Check this box if the owner will live in the property themselves. This affects eligibility for certain tax relief programs and homestead exemptions.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Cost Inflation Projections -->
+            <div class="section no-print">
+                <h2>Cost Inflation Projections</h2>
+
+                <div class="note">
+                    <strong>Why This Matters:</strong> Your expenses won't stay the same over 20 years. Property taxes, insurance, and fees typically increase annually. These projections help you understand the true long-term cost.
+                </div>
+
+                <div class="input-group">
+                    <label for="propertyTaxInflation">Annual Property Tax Increase Rate (%) <span class="tooltip" data-tooltip="Historical average: ~4.5%; Recent trend: 5-10%/year">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="propertyTaxInflation" class="slider" min="0" max="10" value="4.5" step="0.1">
+                        <div class="slider-value">
+                            <span>0%</span>
+                            <span class="current-value"><span id="propertyTaxInflationValue">4.5</span>%</span>
+                            <span>10%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Property Tax Growth Context:</strong><br>
+                    &bull; National average: Property taxes grew ~3-4% annually over the past 20 years<br>
+                    &bull; Recent trend (2020-2025): Many areas saw 5-10% annual increases<br>
+                    &bull; Varies significantly by state and local budgets<br>
+                    &bull; Conservative estimate: 4.5% annually<br>
+                    &bull; Aggressive estimate: 6-8% annually<br>
+                    <br>
+                    <em>Property tax increases come from both: (1) rising property values (appraisals), and (2) increased mill levies/rates as local governments expand budgets.</em>
+                </div>
+
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="insuranceInflation">Annual Insurance Increase (%) <span class="tooltip" data-tooltip="Typical: 3-5% annually">ⓘ</span></label>
+                        <div class="slider-container">
+                            <input type="range" id="insuranceInflation" class="slider" min="0" max="10" value="4.0" step="0.1">
+                            <div class="slider-value">
+                                <span>0%</span>
+                                <span class="current-value"><span id="insuranceInflationValue">4.0</span>%</span>
+                                <span>10%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="feeInflation">Annual Fee Increase (%) <span class="tooltip" data-tooltip="Waste disposal, HOA, utilities, etc.">ⓘ</span></label>
+                        <div class="slider-container">
+                            <input type="range" id="feeInflation" class="slider" min="0" max="10" value="3.0" step="0.1">
+                            <div class="slider-value">
+                                <span>0%</span>
+                                <span class="current-value"><span id="feeInflationValue">3.0</span>%</span>
+                                <span>10%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="maintenanceInflation">Annual Maintenance Cost Increase (%) <span class="tooltip" data-tooltip="Labor & materials typically track inflation">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="maintenanceInflation" class="slider" min="0" max="10" value="3.0" step="0.1">
+                        <div class="slider-value">
+                            <span>0%</span>
+                            <span class="current-value"><span id="maintenanceInflationValue">3.0</span>%</span>
+                            <span>10%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning">
+                    <strong>Impact of Inflation:</strong> Even modest annual increases compound significantly over time. For example, at 4.5% annual growth, your property taxes will more than double in 16 years. The calculator accounts for these increases in all projections.
+                </div>
+            </div>
+
+            <!-- Investment Horizon & Appreciation -->
+            <div class="section no-print">
+                <h2>Investment Horizon &amp; Property Appreciation</h2>
+
+                <div class="input-group">
+                    <label for="investmentHorizon">Expected Ownership Period (Years) <span class="tooltip" data-tooltip="How long you plan to own the property">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="investmentHorizon" class="slider" min="1" max="30" value="20" step="1">
+                        <div class="slider-value">
+                            <span>1 year</span>
+                            <span class="current-value"><span id="investmentHorizonValue">20</span> years</span>
+                            <span>30 years</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>About Investment Horizon:</strong> Choose how long you plan to own the property. After this period, you could sell the property or continue renting to other tenants. This calculator will show you the property's projected value at the end of this period.
+                </div>
+
+                <div class="input-group">
+                    <label for="appreciationRate">Annual Property Appreciation Rate (%) <span class="tooltip" data-tooltip="US national avg: 3-4%; Rural/small markets: 1-2% conservative">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="appreciationRate" class="slider" min="0" max="6" value="1.5" step="0.1">
+                        <div class="slider-value">
+                            <span>0%</span>
+                            <span class="current-value"><span id="appreciationRateValue">1.5</span>%</span>
+                            <span>6%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>US Real Estate Appreciation Context:</strong><br>
+                    &bull; US national average: 3-4% annually (long-term historical)<br>
+                    &bull; Major metro areas: 4-6% historically<br>
+                    &bull; Small/rural towns: 1-2% or lower<br>
+                    &bull; Recent years (2020-2024): Many areas saw 5-15% annual growth (unsustainable)<br>
+                    &bull; Default: 1.5% (conservative for smaller markets)<br>
+                    <br>
+                    <em>Appreciation varies dramatically by location, economic conditions, and population trends. Use local market data when available.</em>
+                </div>
+            </div>
+
+            <!-- Alternative Investment Comparison -->
+            <div class="section no-print">
+                <h2>Alternative Investment Comparison</h2>
+
+                <div class="input-group">
+                    <label for="alternativeInvestment">Compare To:</label>
+                    <select id="alternativeInvestment" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em;">
+                        <option value="sp500">S&amp;P 500 Index Fund (ETF)</option>
+                        <option value="hysa">High-Yield Savings Account (HYSA)</option>
+                        <option value="custom">Custom Return Rate</option>
+                    </select>
+                </div>
+
+                <div id="customRateSection" style="display: none;" class="input-group">
+                    <label for="customRate">Custom Annual Return Rate (%)</label>
+                    <div class="slider-container">
+                        <input type="range" id="customRate" class="slider" min="0" max="20" value="7" step="0.1">
+                        <div class="slider-value">
+                            <span>0%</span>
+                            <span class="current-value"><span id="customRateValue">7.0</span>%</span>
+                            <span>20%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Investment Comparison Defaults:</strong><br>
+                    &bull; <strong>S&amp;P 500:</strong> ~10% average annual return (historical long-term average with dividends reinvested)<br>
+                    &bull; <strong>High-Yield Savings Account:</strong> ~4.0% APY (current rates as of early 2026)<br>
+                    &bull; <strong>Custom:</strong> Enter your own expected return rate<br>
+                    <br>
+                    <em>Note: Stock market returns vary significantly year-to-year. The 10% is a long-term average. Past performance doesn't guarantee future returns. HYSA rates are variable and may decrease when Fed cuts rates.</em>
+                </div>
+            </div>
+
+            <!-- Annual Costs Section -->
+            <div class="section no-print">
+                <h2>Annual Property Costs</h2>
+
+                <div class="input-group">
+                    <label for="propertyTaxRate">Property Tax Rate (% of Market Value) <span class="tooltip" data-tooltip="Effective tax rate as % of property value">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="propertyTaxRate" class="slider" min="0.5" max="4.0" value="2.55" step="0.01">
+                        <div class="slider-value">
+                            <span>0.5%</span>
+                            <span class="current-value"><span id="propertyTaxRateValue">2.55</span>%</span>
+                            <span>4.0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>How This Calculator Handles Property Taxes:</strong><br>
+                    <br>
+                    <strong>Method Used:</strong> This calculator uses the <em>effective tax rate</em> method for simplicity and accuracy across all US locations.<br>
+                    <br>
+                    <strong>Effective Tax Rate = Annual Property Tax &divide; Market Value</strong><br>
+                    <br>
+                    <strong>Why this method?</strong><br>
+                    &bull; Different states/counties use different assessment ratios and mill levies<br>
+                    &bull; Some assess at 100% of market value, others at 10%, 11.5%, 15%, etc.<br>
+                    &bull; Mill levies (tax rates per $1,000 of assessed value) vary widely<br>
+                    &bull; The "effective rate" cuts through this complexity<br>
+                    &bull; It directly answers: "What % of my property's market value will I pay in taxes?"<br>
+                    <br>
+                    <strong>Example Calculation:</strong><br>
+                    &bull; Property market value: $100,000<br>
+                    &bull; Effective tax rate: 1.5%<br>
+                    &bull; Annual property tax = $100,000 &times; 1.5% = <strong>$1,500/year</strong><br>
+                    <br>
+                    <strong>How to Find Your Rate:</strong><br>
+                    1. <strong>Best:</strong> Use the "Lookup Local Tax Rate" button above (requires free API key)<br>
+                    2. <strong>Good:</strong> Check recent tax bills for similar properties in the area<br>
+                    3. <strong>Okay:</strong> Visit your county assessor's website and calculate: (annual tax &divide; sale price)<br>
+                    <br>
+                    <strong>Typical Ranges:</strong><br>
+                    &bull; Low tax states (HI, AL, LA): 0.3-0.6%<br>
+                    &bull; Mid-range (CA, NV, AZ, FL): 0.7-1.2%<br>
+                    &bull; High tax states (NJ, IL, NH, TX, CT): 1.5-2.5%+<br>
+                    <br>
+                    <em>Note: This is different from the "mill levy" system used in some states, but produces the same annual tax amount.</em>
+                </div>
+
+                <div class="input-group">
+                    <label for="insuranceAnnual">Landlord Insurance (Annual $) <span class="tooltip" data-tooltip="Typical: $800-1,500/year for a standard rental property">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="insuranceAnnual" class="slider" min="400" max="2500" value="900" step="50">
+                        <div class="slider-value">
+                            <span>$400</span>
+                            <span class="current-value">$<span id="insuranceAnnualValue">900</span></span>
+                            <span>$2,500</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Insurance Requirements:</strong> If you finance the property, your lender will require landlord insurance. Even with cash purchase, it's highly recommended. Landlord insurance covers the building and your liability. You can require your tenant to have renter's insurance (typically $14-25/month) to cover their belongings.
+                </div>
+
+                <div class="input-group">
+                    <label for="maintenancePercent">Maintenance Budget (% of property value) <span class="tooltip" data-tooltip="Industry standard: 1-4% annually">ⓘ</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="maintenancePercent" class="slider" min="0.5" max="5.0" value="2.0" step="0.1">
+                        <div class="slider-value">
+                            <span>0.5%</span>
+                            <span class="current-value"><span id="maintenancePercentValue">2.0</span>%</span>
+                            <span>5.0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Maintenance Cost Guidance:</strong> Industry experts recommend budgeting 1-4% of property value annually. For a $60,000 property, 2% = $1,200/year. This covers routine maintenance, repairs, and building an emergency fund. Older properties may need 3-4%.
+                </div>
+
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="solidWasteFee">Solid Waste Fee (Annual $) <span class="tooltip" data-tooltip="Varies by municipality; check local rates">ⓘ</span></label>
+                        <input type="number" id="solidWasteFee" value="90" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="otherFees">Other Annual Fees ($) <span class="tooltip" data-tooltip="HOA, utilities, etc.">ⓘ</span></label>
+                        <input type="number" id="otherFees" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results">
+                <!-- Summary Cards -->
+                <div class="section">
+                    <h2>Financial Summary</h2>
+                    <div class="grid-3">
+                        <div class="info-card">
+                            <h3>Annual Revenue</h3>
+                            <div class="value positive">$<span id="annualRevenue">0</span></div>
+                            <div class="subtext">From rental income</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Annual Expenses</h3>
+                            <div class="value negative">$<span id="annualExpenses">0</span></div>
+                            <div class="subtext">All costs combined</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Net Annual Cash Flow</h3>
+                            <div class="value" id="netCashFlow">$0</div>
+                            <div class="subtext">Revenue - Expenses</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Breakdown -->
+                <div class="section">
+                    <h2>Monthly Breakdown</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Year 1 Monthly</th>
+                                <th>Year 1 Annual</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyBreakdown">
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                        <strong>Note:</strong> These are Year 1 costs. With inflation enabled, your actual costs will increase over time. See the expense inflation analysis below for projected increases.
+                    </p>
+                </div>
+
+                <!-- Expense Inflation Impact -->
+                <div class="section">
+                    <h2>Expense Inflation Impact Over Time</h2>
+
+                    <div class="info-card" style="background: #fff8dc; border-top-color: #ffa500;">
+                        <h3>Total Expenses Over <span id="horizonYears">20</span> Years</h3>
+                        <div class="value">$<span id="cumulativeExpenses">0</span></div>
+                        <div class="subtext">Including inflation vs. $<span id="staticExpenses">0</span> if costs never increased</div>
+                    </div>
+
+                    <div class="grid-2" style="margin-top: 20px;">
+                        <div class="info-card">
+                            <h3>Year 1 Total Expenses</h3>
+                            <div class="value">$<span id="year1Expenses">0</span></div>
+                            <div class="subtext">Starting annual costs</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Year <span id="finalYear">20</span> Total Expenses</h3>
+                            <div class="value" style="color: #dc3545;">$<span id="finalYearExpenses">0</span></div>
+                            <div class="subtext">Projected costs in final year</div>
+                        </div>
+                    </div>
+
+                    <table style="margin-top: 20px;">
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>Property Tax</th>
+                                <th>Insurance</th>
+                                <th>Maintenance</th>
+                                <th>Fees</th>
+                                <th>Total Annual</th>
+                                <th>Cash Flow</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inflationBreakdown">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Investment Recovery Timeline -->
+                <div class="section">
+                    <h2>Investment Recovery Analysis</h2>
+                    <div class="info-card">
+                        <h3>Time to Break Even</h3>
+                        <div class="value" id="breakEvenTime">0</div>
+                        <div class="subtext" id="breakEvenDesc"></div>
+                    </div>
+
+                    <div class="timeline" id="recoveryTimeline"></div>
+                </div>
+
+                <!-- Property Appreciation Analysis -->
+                <div class="section">
+                    <h2>Property Value Appreciation Analysis</h2>
+                    <div class="grid-2">
+                        <div class="info-card">
+                            <h3>Purchase Price</h3>
+                            <div class="value">$<span id="purchasePriceDisplay">0</span></div>
+                            <div class="subtext">Initial investment</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Projected Future Value</h3>
+                            <div class="value positive">$<span id="futurePropertyValue">0</span></div>
+                            <div class="subtext">After <span id="yearsDisplay">0</span> years at <span id="appreciationDisplay">0</span>% annual growth</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-3" style="margin-top: 20px;">
+                        <div class="info-card">
+                            <h3>Property Appreciation</h3>
+                            <div class="value positive">$<span id="totalAppreciation">0</span></div>
+                            <div class="subtext">Total value gained</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Total Cash Flow</h3>
+                            <div class="value" id="totalCashFlowDisplay">$0</div>
+                            <div class="subtext">Cumulative rent profit/loss</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Combined Return</h3>
+                            <div class="value positive">$<span id="combinedReturn">0</span></div>
+                            <div class="subtext">Appreciation + Cash Flow</div>
+                        </div>
+                    </div>
+
+                    <div class="info-card" style="margin-top: 20px; background: #f0f8ff;">
+                        <h3>Total Return on Investment (ROI)</h3>
+                        <div class="value positive" style="font-size: 2.5em;"><span id="totalROI">0</span>%</div>
+                        <div class="subtext" style="font-size: 1.1em;">Annualized: <span id="annualizedROI">0</span>% per year</div>
+                    </div>
+                </div>
+
+                <!-- Alternative Investment Comparison -->
+                <div class="section">
+                    <h2>Investment Comparison Analysis</h2>
+
+                    <div class="note" style="background: #fff8dc; border-color: #ffa500;">
+                        <strong>What if you invested the $<span id="comparisonAmount">0</span> in <span id="comparisonType">the stock market</span> instead?</strong>
+                    </div>
+
+                    <div class="grid-2" style="margin-top: 20px;">
+                        <div class="info-card" style="border: 3px solid #667eea;">
+                            <h3>Property Investment</h3>
+                            <div class="value positive">$<span id="propertyFinalValue">0</span></div>
+                            <div class="subtext">Property value + cumulative cash flow</div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0e0;">
+                                <strong>ROI: <span id="propertyROIPercent">0</span>%</strong><br>
+                                <span class="subtext">Annualized: <span id="propertyAnnualizedPercent">0</span>%/year</span>
+                            </div>
+                        </div>
+                        <div class="info-card" style="border: 3px solid #28a745;">
+                            <h3><span id="alternativeInvestmentName">Alternative Investment</span></h3>
+                            <div class="value">$<span id="alternativeFinalValue">0</span></div>
+                            <div class="subtext">If invested at <span id="alternativeRateDisplay">0</span>% annual return</div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0e0;">
+                                <strong>ROI: <span id="alternativeROIPercent">0</span>%</strong><br>
+                                <span class="subtext">Annualized: <span id="alternativeAnnualizedPercent">0</span>%/year</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card" style="margin-top: 20px;" id="comparisonResultCard">
+                        <h3 id="comparisonResultTitle">Investment Comparison Result</h3>
+                        <div class="value" id="comparisonDifference" style="font-size: 2em;">$0</div>
+                        <div class="subtext" id="comparisonResultText">Comparison result</div>
+                    </div>
+
+                    <div class="warning hide-on-print" style="margin-top: 20px;">
+                        <strong>Important Context on This Comparison:</strong><br>
+                        &bull; This assumes you have $<span id="fullAmount">0</span> available to invest<br>
+                        &bull; Property ownership provides tangible value beyond pure financial returns<br>
+                        &bull; Stock market returns fluctuate significantly year-to-year (this uses long-term averages)<br>
+                        &bull; Property provides diversification if your other assets are in stocks<br>
+                        &bull; Real estate has unique tax benefits (depreciation, expense deductions)<br>
+                        &bull; HYSA returns are essentially risk-free; stock and real estate carry market risk<br>
+                        &bull; Property requires active management; stocks/HYSA are passive<br>
+                        <br>
+                        <em>This is a simplified comparison for educational purposes. Consult a financial advisor for personalized advice.</em>
+                    </div>
+
+                    <div class="note print-only" style="display: none; margin-top: 20px;">
+                        <strong>Investment Comparison Notes:</strong><br>
+                        &bull; Stock market returns fluctuate significantly year-to-year (this uses long-term averages)<br>
+                        &bull; Property provides diversification if your other assets are in stocks<br>
+                        &bull; Real estate has unique tax benefits (depreciation, expense deductions)<br>
+                        &bull; HYSA returns are essentially risk-free; stock and real estate carry market risk<br>
+                        &bull; Property requires active management; stocks/HYSA are passive<br>
+                        <br>
+                        <em>This is a simplified comparison for educational purposes. Consult a financial advisor for personalized advice.</em>
+                    </div>
+                </div>
+
+                <!-- Print-only comprehensive details -->
+                <div class="section print-only" style="display: none;">
+                    <h2>Property Ownership Details &amp; Requirements</h2>
+
+                    <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Property Tax Information</h3>
+                    <div class="note">
+                        <strong>US Property Tax System:</strong><br>
+                        &bull; Property taxes are levied at the local level (county, city, school district)<br>
+                        &bull; Each state has different assessment methods and ratios<br>
+                        &bull; Some states assess at full market value, others use percentages<br>
+                        &bull; Tax rates vary dramatically by location (0.3% to 2.5%+ of market value)<br>
+                        &bull; Property taxes are typically paid annually or semi-annually<br>
+                        &bull; Taxes are based on assessed value &times; local tax rate (mill levy)<br>
+                        &bull; Reassessments occur periodically (varies by jurisdiction)<br>
+                        <br>
+                        <strong>For This Calculator:</strong><br>
+                        &bull; Uses "effective tax rate" = actual annual tax &divide; market value<br>
+                        &bull; This simplifies comparison across different jurisdictions<br>
+                        &bull; Use the "Lookup Local Tax Rate" feature for location-specific rates<br>
+                        &bull; Property taxes are deductible on federal taxes (up to $10,000 SALT cap)
+                    </div>
+
+                    <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Insurance Requirements</h3>
+                    <div class="note">
+                        <strong>Landlord Insurance (Property Insurance):</strong><br>
+                        &bull; Not legally required if you own the property outright (cash purchase)<br>
+                        &bull; Strongly recommended for all landlords to protect your investment<br>
+                        &bull; Required by mortgage lenders if you finance the property<br>
+                        &bull; Typical coverage includes: dwelling, other structures, liability, loss of rental income<br>
+                        &bull; Does NOT cover tenant's personal belongings<br>
+                        &bull; Annual cost typically ranges from $800-$1,500 for properties in this price range<br>
+                        <br>
+                        <strong>Renter's Insurance (Tenant's Insurance):</strong><br>
+                        &bull; Not required by federal law<br>
+                        &bull; You CAN require tenants to carry it as a lease condition (recommended)<br>
+                        &bull; Protects tenant's personal property and provides liability coverage for the tenant<br>
+                        &bull; Typically costs $15-30/month depending on location and coverage<br>
+                        &bull; Benefits you by ensuring tenant has liability coverage<br>
+                        &bull; Some states have specific laws about requiring renter's insurance<br>
+                        <br>
+                        <strong>Additional Coverage Considerations:</strong><br>
+                        &bull; Umbrella liability policy (extra protection beyond standard coverage)<br>
+                        &bull; Flood insurance (if in flood zone - not typically covered by standard policies)<br>
+                        &bull; Sewer backup coverage
+                    </div>
+
+                    <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Maintenance &amp; Operating Costs</h3>
+                    <div class="note">
+                        <strong>Annual Maintenance Budget:</strong><br>
+                        &bull; Industry standard: 1-4% of property value annually<br>
+                        &bull; Covers: routine repairs, preventive maintenance, emergency funds<br>
+                        &bull; Older properties typically need 3-4%; newer properties may only need 1-2%<br>
+                        &bull; Set aside funds regularly even if not needed immediately<br>
+                        <br>
+                        <strong>Common Maintenance Expenses:</strong><br>
+                        &bull; HVAC servicing and repairs/replacement ($100-8,000)<br>
+                        &bull; Plumbing repairs ($150-1,500)<br>
+                        &bull; Roof repairs/replacement ($300-12,000)<br>
+                        &bull; Appliance repairs/replacement ($200-2,000 each)<br>
+                        &bull; Pest control ($200-500/year)<br>
+                        &bull; Lawn care and snow removal (if provided)<br>
+                        &bull; Paint and minor cosmetic updates ($500-2,000)<br>
+                        <br>
+                        <strong>Hidden/Occasional Costs:</strong><br>
+                        &bull; Vacancy periods (no rental income while finding tenants)<br>
+                        &bull; Tenant screening costs ($25-75 per applicant)<br>
+                        &bull; Legal fees for evictions or disputes ($500-3,000+)<br>
+                        &bull; Property management fees (typically 8-10% of rent if hired)<br>
+                        &bull; Travel costs to/from property for inspections and maintenance<br>
+                        &bull; Accounting and tax preparation fees<br>
+                        &bull; HOA fees (if applicable)<br>
+                        &bull; Utilities during vacancy periods
+                    </div>
+
+                    <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Legal &amp; Tax Considerations</h3>
+                    <div class="note">
+                        <strong>General Landlord Responsibilities (US):</strong><br>
+                        &bull; Maintain habitable living conditions<br>
+                        &bull; Make necessary repairs promptly<br>
+                        &bull; Comply with all building and housing codes<br>
+                        &bull; Provide proper notice before entry (typically 24-48 hours, varies by state)<br>
+                        &bull; Return security deposit within required timeframe (varies by state: 14-60 days)<br>
+                        &bull; Cannot discriminate under Fair Housing Act<br>
+                        &bull; Must follow state-specific eviction procedures<br>
+                        <br>
+                        <em>Note: Landlord-tenant laws vary significantly by state. Research your specific state's requirements.</em><br>
+                        <br>
+                        <strong>Tax Benefits of Rental Property:</strong><br>
+                        &bull; Depreciation: Deduct 1/27.5 of building value annually for 27.5 years<br>
+                        &bull; Operating expenses fully deductible: insurance, maintenance, management fees, advertising, utilities, property taxes, interest (if financed)<br>
+                        &bull; Travel expenses to/from property (if documented)<br>
+                        &bull; Home office deduction (if you have dedicated space for managing rental)<br>
+                        &bull; Professional fees: accountant, attorney, property management<br>
+                        <br>
+                        <strong>Important:</strong> Consult with a tax professional for personalized advice on maximizing deductions and understanding tax implications.
+                    </div>
+                </div>
+
+                <!-- Property Tax Relief Information -->
+                <div class="section hide-on-print" id="taxReliefSection" style="display: none;">
+                    <h2>Owner-Occupant Tax Relief Programs</h2>
+                    <div class="warning">
+                        <strong>Owner-Occupant Benefits:</strong> As an owner-occupant, you may qualify for property tax relief programs in your state.
+                    </div>
+
+                    <div class="note">
+                        <strong>Common State Tax Relief Programs:</strong><br>
+                        Most states offer some form of property tax relief for owner-occupants. Common programs include:<br>
+                        <br>
+                        <strong>Homestead Exemptions:</strong><br>
+                        &bull; Reduces taxable value of your primary residence<br>
+                        &bull; Available in most states with varying amounts<br>
+                        &bull; Must be your primary residence<br>
+                        &bull; Often requires annual application<br>
+                        <br>
+                        <strong>Senior Citizen Tax Relief:</strong><br>
+                        &bull; Typically for homeowners 65+<br>
+                        &bull; May include exemptions, credits, or assessment freezes<br>
+                        &bull; Often has income limits<br>
+                        &bull; Varies significantly by state<br>
+                        <br>
+                        <strong>Disability Exemptions:</strong><br>
+                        &bull; Available in many states for disabled homeowners<br>
+                        &bull; May reduce or freeze assessed values<br>
+                        &bull; Usually requires proof of disability<br>
+                        <br>
+                        <strong>Veteran Exemptions:</strong><br>
+                        &bull; Many states offer property tax relief for veterans<br>
+                        &bull; Especially for disabled veterans<br>
+                        <br>
+                        <em>Important: These programs are for owner-occupants only. If you're renting the property to others, you typically won't qualify. Check your state and county websites for specific programs available in your area.</em>
+                    </div>
+                </div>
+
+                <!-- Renter Type Selection -->
+                <div class="section no-print">
+                    <h2>Renter Relationship</h2>
+
+                    <div class="input-group">
+                        <label for="renterType">Who will be renting this property?</label>
+                        <select id="renterType" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em;">
+                            <option value="unrelated">Unrelated third-party tenant</option>
+                            <option value="family">Family member or close friend</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Key Considerations -->
+                <div class="section">
+                    <h2>Important Considerations</h2>
+
+                    <div class="warning" id="familyRentalRisks" style="display: none;">
+                        <strong>Family Rental Risks:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>Mixing business and family relationships can be challenging</li>
+                            <li>Difficult to enforce rent collection or eviction if needed</li>
+                            <li>May create family tension if issues arise</li>
+                            <li>Consider having a written lease agreement regardless of relationship</li>
+                            <li>Discuss expectations clearly upfront about maintenance responsibilities</li>
+                            <li>Set boundaries between landlord role and family role</li>
+                        </ul>
+                    </div>
+
+                    <div class="note">
+                        <strong>Legal &amp; Regulatory Requirements:</strong><br>
+                        &bull; You must maintain habitable living conditions<br>
+                        &bull; Required to make repairs promptly<br>
+                        &bull; Cannot discriminate in housing practices (Fair Housing Act)<br>
+                        &bull; Should have written lease even for family<br>
+                        &bull; Consider requiring renter's insurance from tenant (typically $15-30/month)<br>
+                        &bull; Keep detailed records of all income and expenses for taxes<br>
+                        &bull; Property maintenance expenses are tax deductible<br>
+                        &bull; You can depreciate the property value over 27.5 years for tax purposes<br>
+                        &bull; Local and state laws vary - consult with a local real estate attorney<br>
+                        <br>
+                        <em>Note: Landlord-tenant laws vary significantly by state. Research your specific state's requirements for security deposits, notice periods, eviction procedures, and habitability standards.</em>
+                    </div>
+
+                    <div class="note">
+                        <strong>Hidden Costs to Consider:</strong><br>
+                        &bull; Vacancy periods (no rental income)<br>
+                        &bull; Major repairs (roof, HVAC, plumbing)<br>
+                        &bull; Legal fees if disputes arise<br>
+                        &bull; Travel costs to/from property for maintenance<br>
+                        &bull; Potential need for property manager<br>
+                        &bull; Accounting/tax preparation fees
+                    </div>
+                </div>
+
+                <!-- Generate Report Button -->
+                <div class="section no-print">
+                    <button class="button" onclick="window.print()">Print / Save Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/calculator.js"></script>
+</body>
+</html>
